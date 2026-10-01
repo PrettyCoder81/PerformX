@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import {
   AppBar,
   Toolbar,
@@ -10,6 +11,10 @@ import {
   Badge,
   InputBase,
   Tooltip,
+  Menu,
+  MenuItem,
+  Divider,
+  ListItemIcon,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -17,10 +22,14 @@ import {
   Search as SearchIcon,
   DarkMode as DarkModeIcon,
   LightMode as LightModeIcon,
+  Logout as LogoutIcon,
+  Settings as SettingsIcon,
+  Person as PersonIcon,
 } from '@mui/icons-material';
 import { styled, alpha } from '@mui/material/styles';
 import type { RootState } from '../../store';
 import { toggleSidebar, toggleTheme } from '../../store/slices/uiSlice';
+import { logout } from '../../store/slices/authSlice';
 import { DRAWER_WIDTH } from './Sidebar';
 
 const Search = styled('div')(({ theme }) => ({
@@ -60,8 +69,32 @@ const StyledInputBase = styled(InputBase)(({ theme }) => ({
 
 const Header: React.FC = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const sidebarOpen = useSelector((state: RootState) => state.ui.sidebarOpen);
   const themeMode = useSelector((state: RootState) => state.ui.themeMode);
+  const user = useSelector((state: RootState) => state.auth.user);
+
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const menuOpen = Boolean(anchorEl);
+
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleLogout = () => {
+    dispatch(logout());
+    navigate('/auth/login');
+    handleMenuClose();
+  };
+
+  const handleProfile = () => {
+    navigate('/settings');
+    handleMenuClose();
+  };
 
   return (
     <AppBar
@@ -108,18 +141,85 @@ const Header: React.FC = () => {
           </IconButton>
         </Tooltip>
 
-        <Box sx={{ ml: 2, display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
-            <Typography variant="subtitle2" fontWeight={600}>
-              Admin User
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              HR Manager
-            </Typography>
+        <Box sx={{ ml: 1 }}>
+          <Box
+            onClick={handleMenuOpen}
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1.5,
+              cursor: 'pointer',
+              p: 0.5,
+              borderRadius: 2,
+              '&:hover': { bgcolor: 'action.hover' },
+            }}
+          >
+            <Box sx={{ display: { xs: 'none', sm: 'block' }, textAlign: 'right' }}>
+              <Typography variant="subtitle2" fontWeight={600}>
+                {user?.name || 'Admin User'}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {user?.role || 'HR Manager'}
+              </Typography>
+            </Box>
+            <Avatar
+              sx={{
+                bgcolor: 'primary.main',
+                width: 36,
+                height: 36,
+                fontSize: '0.875rem',
+              }}
+            >
+              {user?.avatar || 'AU'}
+            </Avatar>
           </Box>
-          <Avatar sx={{ bgcolor: 'primary.main', width: 36, height: 36, fontSize: '0.875rem', cursor: 'pointer' }}>
-            AU
-          </Avatar>
+
+          <Menu
+            anchorEl={anchorEl}
+            open={menuOpen}
+            onClose={handleMenuClose}
+            onClick={handleMenuClose}
+            transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+            anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+            PaperProps={{
+              sx: {
+                mt: 1,
+                minWidth: 200,
+                boxShadow: '0 4px 24px rgba(0,0,0,0.1)',
+                border: '1px solid',
+                borderColor: 'divider',
+              },
+            }}
+          >
+            <Box sx={{ px: 2, py: 1.5 }}>
+              <Typography variant="subtitle2" fontWeight={600}>
+                {user?.name || 'Admin User'}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {user?.email || 'admin@company.com'}
+              </Typography>
+            </Box>
+            <Divider />
+            <MenuItem onClick={handleProfile}>
+              <ListItemIcon>
+                <PersonIcon fontSize="small" />
+              </ListItemIcon>
+              Profile Settings
+            </MenuItem>
+            <MenuItem onClick={handleProfile}>
+              <ListItemIcon>
+                <SettingsIcon fontSize="small" />
+              </ListItemIcon>
+              Account Settings
+            </MenuItem>
+            <Divider />
+            <MenuItem onClick={handleLogout} sx={{ color: 'error.main' }}>
+              <ListItemIcon>
+                <LogoutIcon fontSize="small" color="error" />
+              </ListItemIcon>
+              Sign Out
+            </MenuItem>
+          </Menu>
         </Box>
       </Toolbar>
     </AppBar>
