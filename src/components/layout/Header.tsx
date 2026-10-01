@@ -35,9 +35,15 @@ import { DRAWER_WIDTH } from './Sidebar';
 const Search = styled('div')(({ theme }) => ({
   position: 'relative',
   borderRadius: 8,
-  backgroundColor: alpha(theme.palette.common.black, 0.04),
+  backgroundColor:
+    theme.palette.mode === 'dark'
+      ? alpha(theme.palette.common.white, 0.08)
+      : alpha(theme.palette.common.black, 0.04),
   '&:hover': {
-    backgroundColor: alpha(theme.palette.common.black, 0.06),
+    backgroundColor:
+      theme.palette.mode === 'dark'
+        ? alpha(theme.palette.common.white, 0.12)
+        : alpha(theme.palette.common.black, 0.06),
   },
   marginRight: theme.spacing(2),
   marginLeft: theme.spacing(2),

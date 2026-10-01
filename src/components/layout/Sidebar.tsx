@@ -59,7 +59,7 @@ const Sidebar: React.FC = () => {
         '& .MuiDrawer-paper': {
           width: DRAWER_WIDTH,
           boxSizing: 'border-box',
-          bgcolor: '#ffffff',
+          bgcolor: 'background.paper',
         },
       }}
     >
@@ -128,7 +128,7 @@ const Sidebar: React.FC = () => {
         })}
       </List>
       <Divider sx={{ mt: 2 }} />
-      <Box sx={{ p: 2, mx: 2, mt: 2, bgcolor: '#f1f5f9', borderRadius: 2 }}>
+      <Box sx={{ p: 2, mx: 2, mt: 2, bgcolor: 'action.hover', borderRadius: 2 }}>
         <Typography variant="subtitle2" fontWeight={600} gutterBottom>
           Need help?
         </Typography>
