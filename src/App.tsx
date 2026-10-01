@@ -41,22 +41,57 @@ const AppRoutes: React.FC = () => {
       <Route path="/auth/register" element={isAuthenticated ? <Navigate to="/" replace /> : <Register />} />
 
       {/* Protected routes */}
-      <Route path="/*" element={
+      <Route path="/" element={
         <AuthGuard>
           <Layout>
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/employees" element={<Employees />} />
-              <Route path="/reviews" element={<Reviews />} />
-              <Route path="/analytics" element={<Analytics />} />
-              <Route path="/goals" element={<Goals />} />
-              <Route path="/todos" element={<Todos />} />
-              <Route path="/settings" element={<Settings />} />
-            </Routes>
+            <Dashboard />
+          </Layout>
+        </AuthGuard>
+      } />
+      <Route path="/employees" element={
+        <AuthGuard>
+          <Layout>
+            <Employees />
+          </Layout>
+        </AuthGuard>
+      } />
+      <Route path="/reviews" element={
+        <AuthGuard>
+          <Layout>
+            <Reviews />
+          </Layout>
+        </AuthGuard>
+      } />
+      <Route path="/analytics" element={
+        <AuthGuard>
+          <Layout>
+            <Analytics />
+          </Layout>
+        </AuthGuard>
+      } />
+      <Route path="/goals" element={
+        <AuthGuard>
+          <Layout>
+            <Goals />
+          </Layout>
+        </AuthGuard>
+      } />
+      <Route path="/todos" element={
+        <AuthGuard>
+          <Layout>
+            <Todos />
+          </Layout>
+        </AuthGuard>
+      } />
+      <Route path="/settings" element={
+        <AuthGuard>
+          <Layout>
+            <Settings />
           </Layout>
         </AuthGuard>
       } />
 
+      {/* Catch-all redirect */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
