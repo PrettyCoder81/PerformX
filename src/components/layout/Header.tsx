@@ -164,8 +164,8 @@ const Header: React.FC = () => {
               <Typography variant="subtitle2" fontWeight={600}>
                 {user?.name || 'Admin User'}
               </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {user?.role || 'HR Manager'}
+              <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'capitalize' }}>
+                {user?.role || 'user'}
               </Typography>
             </Box>
             <Avatar
@@ -184,46 +184,101 @@ const Header: React.FC = () => {
             anchorEl={anchorEl}
             open={menuOpen}
             onClose={handleMenuClose}
-            onClick={handleMenuClose}
             transformOrigin={{ horizontal: 'right', vertical: 'top' }}
             anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
             PaperProps={{
               sx: {
                 mt: 1,
-                minWidth: 200,
+                minWidth: 240,
                 boxShadow: '0 4px 24px rgba(0,0,0,0.1)',
                 border: '1px solid',
                 borderColor: 'divider',
+                overflow: 'visible',
+                '&:before': {
+                  content: '""',
+                  display: 'block',
+                  position: 'absolute',
+                  top: 0,
+                  right: 14,
+                  width: 10,
+                  height: 10,
+                  bgcolor: 'background.paper',
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  transform: 'translateY(-50%) rotate(45deg)',
+                  borderBottom: 'none',
+                  borderRight: 'none',
+                  zIndex: 0,
+                },
               },
             }}
           >
-            <Box sx={{ px: 2, py: 1.5 }}>
-              <Typography variant="subtitle2" fontWeight={600}>
-                {user?.name || 'Admin User'}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {user?.email || 'admin@company.com'}
-              </Typography>
+            <Box sx={{ px: 2, py: 1.5, bgcolor: 'action.hover' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Avatar
+                  sx={{
+                    bgcolor: 'primary.main',
+                    width: 40,
+                    height: 40,
+                    fontSize: '0.875rem',
+                  }}
+                >
+                  {user?.avatar || 'AU'}
+                </Avatar>
+                <Box>
+                  <Typography variant="subtitle2" fontWeight={600}>
+                    {user?.name || 'Admin User'}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {user?.email || 'admin@company.com'}
+                  </Typography>
+                </Box>
+              </Box>
+              <Box sx={{ mt: 1 }}>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    bgcolor: user?.role === 'admin' ? 'primary.main' : 'secondary.main',
+                    color: 'primary.contrastText',
+                    px: 1,
+                    py: 0.25,
+                    borderRadius: 1,
+                    textTransform: 'capitalize',
+                    fontWeight: 600,
+                  }}
+                >
+                  {user?.role || 'user'}
+                </Typography>
+              </Box>
             </Box>
             <Divider />
-            <MenuItem onClick={handleProfile}>
+            <MenuItem onClick={handleProfile} sx={{ py: 1.5 }}>
               <ListItemIcon>
                 <PersonIcon fontSize="small" />
               </ListItemIcon>
-              Profile Settings
+              <Box>
+                <Typography variant="body2" fontWeight={500}>Profile Settings</Typography>
+                <Typography variant="caption" color="text.secondary">View and edit your profile</Typography>
+              </Box>
             </MenuItem>
-            <MenuItem onClick={handleProfile}>
+            <MenuItem onClick={() => { navigate('/settings'); handleMenuClose(); }} sx={{ py: 1.5 }}>
               <ListItemIcon>
                 <SettingsIcon fontSize="small" />
               </ListItemIcon>
-              Account Settings
+              <Box>
+                <Typography variant="body2" fontWeight={500}>Account Settings</Typography>
+                <Typography variant="caption" color="text.secondary">Manage your account</Typography>
+              </Box>
             </MenuItem>
             <Divider />
-            <MenuItem onClick={handleLogout} sx={{ color: 'error.main' }}>
+            <MenuItem onClick={handleLogout} sx={{ py: 1.5, color: 'error.main' }}>
               <ListItemIcon>
                 <LogoutIcon fontSize="small" color="error" />
               </ListItemIcon>
-              Sign Out
+              <Box>
+                <Typography variant="body2" fontWeight={500}>Sign Out</Typography>
+                <Typography variant="caption" color="error.light">Log out of your account</Typography>
+              </Box>
             </MenuItem>
           </Menu>
         </Box>
