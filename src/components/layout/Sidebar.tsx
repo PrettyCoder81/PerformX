@@ -18,6 +18,7 @@ import {
   TrendingUp as TrendingUpIcon,
   Settings as SettingsIcon,
   BarChart as BarChartIcon,
+  Checklist as ChecklistIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import type { RootState } from '../../store';
@@ -35,6 +36,7 @@ const navItems: NavItem[] = [
   { title: 'Dashboard', path: '/', icon: <DashboardIcon /> },
   { title: 'Employees', path: '/employees', icon: <PeopleIcon /> },
   { title: 'Performance Reviews', path: '/reviews', icon: <AssessmentIcon /> },
+  { title: 'To-Do List', path: '/todos', icon: <ChecklistIcon /> },
   { title: 'Analytics', path: '/analytics', icon: <BarChartIcon /> },
   { title: 'Goals & KPIs', path: '/goals', icon: <TrendingUpIcon /> },
   { title: 'Settings', path: '/settings', icon: <SettingsIcon /> },
