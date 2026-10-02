@@ -1,149 +1,146 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import {
   Box, Card, CardContent, Typography, Button, TextField, Dialog, DialogTitle,
   DialogContent, DialogActions, Chip, Avatar, Grid, Select, MenuItem, FormControl,
-  InputLabel, IconButton, Tooltip, Paper, Badge, InputAdornment, ToggleButtonGroup,
-  ToggleButton, Divider, LinearProgress,
+  InputLabel, IconButton, Tooltip, Paper, Tabs, Tab, Table, TableBody, TableCell,
+  TableContainer, TableHead, TableRow,
 } from '@mui/material';
 import {
-  Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, CheckCircle as CheckIcon,
-  Pending as PendingIcon, HourglassEmpty as HourglassIcon, Search as SearchIcon,
-  ViewModule as KanbanIcon, ViewList as ListIcon, FilterList as FilterIcon,
-  CalendarToday as CalendarIcon, PriorityHigh as PriorityIcon,
+  Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Visibility as ViewIcon,
+  CalendarMonth as CalendarIcon, Computer as MachineIcon, Person as TrainerIcon,
+  AccessTime as DurationIcon, Storage as DatasetIcon, TrendingUp as EpochIcon,
+  Flag as PurposeIcon, CheckCircle as ResultIcon,
 } from '@mui/icons-material';
 import type { RootState } from '../store';
-import { addTodo, updateTodoStatus, deleteTodo, updateTodo } from '../store/slices/todosSlice';
-import type { Todo, TodoStatus, TodoPriority } from '../store/slices/todosSlice';
+import { addRecord, updateRecord, deleteRecord } from '../store/slices/todosSlice';
+import type { MachineRecord } from '../store/slices/todosSlice';
 
-type ViewMode = 'kanban' | 'list';
+type ViewMode = 'day' | 'week' | 'month';
+type TabValue = 'records' | 'analysis';
 
-const Todos: React.FC = () => {
+const MachineRentingReport: React.FC = () => {
   const dispatch = useDispatch();
-  const { list: todos } = useSelector((state: RootState) => state.todos);
+  const { list: records } = useSelector((state: RootState) => state.machineRecords);
   const user = useSelector((state: RootState) => state.auth.user);
 
+  const [activeTab, setActiveTab] = useState<TabValue>('records');
+  const [viewMode, setViewMode] = useState<ViewMode>('month');
+  const [selectedDate, setSelectedDate] = useState(new Date());
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>('kanban');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filterStatus, setFilterStatus] = useState<TodoStatus | 'all'>('all');
-  const [filterPriority, setFilterPriority] = useState<TodoPriority | 'all'>('all');
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [editingRecord, setEditingRecord] = useState<MachineRecord | null>(null);
+  const [selectedRecord, setSelectedRecord] = useState<MachineRecord | null>(null);
   const [formData, setFormData] = useState({
-    title: '', description: '', priority: 'medium' as TodoPriority, dueDate: '',
+    subset: '',
+    trainer: '',
+    machine: '',
+    dataset: '',
+    date: '',
+    duration: 0,
+    epoch: 0,
+    purpose: '',
+    result: '',
   });
 
-  const handleOpenDialog = (todo?: Todo) => {
-    if (todo) {
-      setEditingTodo(todo);
+  // Check permissions
+  const isAdmin = user?.role === 'admin';
+  const canEditRecord = (record: MachineRecord) => {
+    return isAdmin || record.trainerId === user?.id;
+  };
+
+  // Filter records based on view mode and selected date
+  const filteredRecords = useMemo(() => {
+    const selected = new Date(selectedDate);
+    
+    return records.filter((record) => {
+      const recordDate = new Date(record.date);
+      
+      switch (viewMode) {
+        case 'day':
+          return recordDate.toDateString() === selected.toDateString();
+        case 'week': {
+          const weekStart = new Date(selected);
+          weekStart.setDate(selected.getDate() - selected.getDay());
+          const weekEnd = new Date(weekStart);
+          weekEnd.setDate(weekStart.getDate() + 6);
+          return recordDate >= weekStart && recordDate <= weekEnd;
+        }
+        case 'month':
+          return recordDate.getMonth() === selected.getMonth() &&
+                 recordDate.getFullYear() === selected.getFullYear();
+        default:
+          return true;
+      }
+    });
+  }, [records, viewMode, selectedDate]);
+
+  const handleOpenDialog = (record?: MachineRecord) => {
+    if (record) {
+      setEditingRecord(record);
       setFormData({
-        title: todo.title, description: todo.description,
-        priority: todo.priority, dueDate: todo.dueDate?.split('T')[0] || '',
+        subset: record.subset,
+        trainer: record.trainer,
+        machine: record.machine,
+        dataset: record.dataset,
+        date: record.date,
+        duration: record.duration,
+        epoch: record.epoch,
+        purpose: record.purpose,
+        result: record.result,
       });
     } else {
-      setEditingTodo(null);
-      setFormData({ title: '', description: '', priority: 'medium', dueDate: '' });
+      setEditingRecord(null);
+      setFormData({
+        subset: '',
+        trainer: user?.name || '',
+        machine: '',
+        dataset: '',
+        date: new Date().toISOString().split('T')[0],
+        duration: 0,
+        epoch: 0,
+        purpose: '',
+        result: '',
+      });
     }
     setDialogOpen(true);
   };
 
   const handleCloseDialog = () => {
     setDialogOpen(false);
-    setEditingTodo(null);
+    setEditingRecord(null);
   };
 
   const handleSubmit = () => {
-    if (!formData.title.trim()) return;
+    if (!formData.subset.trim() || !formData.machine.trim()) return;
 
-    if (editingTodo) {
-      dispatch(updateTodo({
-        id: editingTodo.id,
-        updates: {
-          title: formData.title,
-          description: formData.description,
-          priority: formData.priority,
-          dueDate: formData.dueDate ? new Date(formData.dueDate).toISOString() : undefined,
-        },
+    if (editingRecord) {
+      dispatch(updateRecord({
+        id: editingRecord.id,
+        updates: formData,
       }));
     } else {
-      dispatch(addTodo({
-        title: formData.title,
-        description: formData.description,
-        status: 'pending',
-        priority: formData.priority,
-        assignedTo: user?.id || '',
-        assignedToName: user?.name || '',
-        assignedToRole: user?.role || 'user',
-        assignedToAvatar: user?.avatar || '',
-        dueDate: formData.dueDate ? new Date(formData.dueDate).toISOString() : undefined,
+      dispatch(addRecord({
+        ...formData,
+        trainerId: user?.id || '',
+        trainerRole: user?.role || 'user',
       }));
     }
     handleCloseDialog();
   };
 
-  const handleStatusChange = (todoId: string, newStatus: TodoStatus) => {
-    dispatch(updateTodoStatus({ id: todoId, status: newStatus }));
+  const handleDelete = (recordId: string) => {
+    dispatch(deleteRecord(recordId));
   };
 
-  const handleDelete = (todoId: string) => {
-    dispatch(deleteTodo(todoId));
+  const handleViewDetails = (record: MachineRecord) => {
+    setSelectedRecord(record);
+    setDetailDialogOpen(true);
   };
 
-  const getStatusIcon = (status: TodoStatus) => {
-    switch (status) {
-      case 'completed': return <CheckIcon fontSize="small" />;
-      case 'in-progress': return <HourglassIcon fontSize="small" />;
-      default: return <PendingIcon fontSize="small" />;
-    }
-  };
-
-  const getStatusColor = (status: TodoStatus): 'success' | 'info' | 'default' => {
-    switch (status) {
-      case 'completed': return 'success';
-      case 'in-progress': return 'info';
-      default: return 'default';
-    }
-  };
-
-  const getPriorityColor = (priority: TodoPriority): 'error' | 'warning' | 'default' => {
-    switch (priority) {
-      case 'high': return 'error';
-      case 'medium': return 'warning';
-      default: return 'default';
-    }
-  };
-
-  const getPriorityBgColor = (priority: TodoPriority): string => {
-    switch (priority) {
-      case 'high': return '#fef2f2';
-      case 'medium': return '#fffbeb';
-      default: return '#f0fdf4';
-    }
-  };
-
-  const isOverdue = (dueDate?: string): boolean => {
-    if (!dueDate) return false;
-    return new Date(dueDate) < new Date();
-  };
-
-  // Filter todos
-  const filteredTodos = todos.filter((todo) => {
-    const matchesSearch = todo.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      todo.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = filterStatus === 'all' || todo.status === filterStatus;
-    const matchesPriority = filterPriority === 'all' || todo.priority === filterPriority;
-    return matchesSearch && matchesStatus && matchesPriority;
-  });
-
-  const myTodos = filteredTodos.filter((t) => t.assignedTo === user?.id);
-  const pendingTodos = filteredTodos.filter((t) => t.status === 'pending');
-  const inProgressTodos = filteredTodos.filter((t) => t.status === 'in-progress');
-  const completedTodos = filteredTodos.filter((t) => t.status === 'completed');
-
-  const completionRate = todos.length > 0 ? Math.round((completedTodos.length / todos.length) * 100) : 0;
-
-  const renderTodoCard = (todo: Todo, showAssignee = false) => (
+  const renderRecordCard = (record: MachineRecord) => (
     <Card
+      key={record.id}
       variant="outlined"
       sx={{
         height: '100%',
@@ -152,468 +149,503 @@ const Todos: React.FC = () => {
           boxShadow: 3,
           transform: 'translateY(-2px)',
         },
-        borderLeft: `4px solid ${
-          todo.priority === 'high' ? '#ef4444' :
-          todo.priority === 'medium' ? '#f59e0b' : '#22c55e'
-        }`,
       }}
     >
       <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
           <Typography variant="subtitle2" fontWeight={600} sx={{ flex: 1, mr: 1 }}>
-            {todo.title}
+            {record.subset}
           </Typography>
           <Box sx={{ display: 'flex', gap: 0.5 }}>
-            <Tooltip title="Edit">
-              <IconButton size="small" onClick={() => handleOpenDialog(todo)}>
-                <EditIcon fontSize="small" />
+            <Tooltip title="View Details">
+              <IconButton size="small" onClick={() => handleViewDetails(record)}>
+                <ViewIcon fontSize="small" />
               </IconButton>
             </Tooltip>
-            <Tooltip title="Delete">
-              <IconButton size="small" color="error" onClick={() => handleDelete(todo.id)}>
-                <DeleteIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
+            {canEditRecord(record) && (
+              <>
+                <Tooltip title="Edit">
+                  <IconButton size="small" onClick={() => handleOpenDialog(record)}>
+                    <EditIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Delete">
+                  <IconButton size="small" color="error" onClick={() => handleDelete(record.id)}>
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </>
+            )}
           </Box>
         </Box>
 
-        {todo.description && (
-          <Typography variant="caption" color="text.secondary" sx={{ mb: 1.5, display: 'block', lineHeight: 1.4 }}>
-            {todo.description}
-          </Typography>
-        )}
-
-        {showAssignee && (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
-            <Avatar sx={{ width: 24, height: 24, fontSize: '0.7rem', bgcolor: 'primary.main' }}>
-              {todo.assignedToAvatar}
-            </Avatar>
-            <Typography variant="caption" fontWeight={500}>
-              {todo.assignedToName}
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <TrainerIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+            <Typography variant="caption" color="text.secondary">
+              {record.trainer}
             </Typography>
           </Box>
-        )}
-
-        <Box sx={{ display: 'flex', gap: 0.5, mb: 1.5, flexWrap: 'wrap' }}>
-          <Chip
-            icon={getStatusIcon(todo.status)}
-            label={todo.status.replace('-', ' ')}
-            size="small"
-            color={getStatusColor(todo.status)}
-            variant="outlined"
-          />
-          <Chip
-            label={todo.priority}
-            size="small"
-            sx={{
-              bgcolor: getPriorityBgColor(todo.priority),
-              borderColor: getPriorityColor(todo.priority) === 'error' ? '#ef4444' :
-                          getPriorityColor(todo.priority) === 'warning' ? '#f59e0b' : '#22c55e',
-              color: getPriorityColor(todo.priority) === 'error' ? '#dc2626' :
-                     getPriorityColor(todo.priority) === 'warning' ? '#d97706' : '#16a34a',
-            }}
-            variant="outlined"
-          />
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <MachineIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+            <Typography variant="caption" color="text.secondary">
+              {record.machine}
+            </Typography>
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <CalendarIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+            <Typography variant="caption" color="text.secondary">
+              {new Date(record.date).toLocaleDateString()}
+            </Typography>
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <DurationIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+            <Typography variant="caption" color="text.secondary">
+              {record.duration} hours
+            </Typography>
+          </Box>
         </Box>
-
-        {todo.dueDate && (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            <CalendarIcon sx={{ fontSize: 14, color: isOverdue(todo.dueDate) ? 'error.main' : 'text.secondary' }} />
-            <Typography
-              variant="caption"
-              sx={{
-                color: isOverdue(todo.dueDate) && todo.status !== 'completed' ? 'error.main' : 'text.secondary',
-                fontWeight: isOverdue(todo.dueDate) && todo.status !== 'completed' ? 600 : 400,
-              }}
-            >
-              {isOverdue(todo.dueDate) && todo.status !== 'completed' ? 'Overdue: ' : 'Due: '}
-              {new Date(todo.dueDate).toLocaleDateString()}
-            </Typography>
-          </Box>
-        )}
-
-        {todo.assignedTo === user?.id && (
-          <Box sx={{ mt: 1.5 }}>
-            <FormControl fullWidth size="small">
-              <Select
-                value={todo.status}
-                onChange={(e) => handleStatusChange(todo.id, e.target.value as TodoStatus)}
-                size="small"
-                sx={{ fontSize: '0.75rem' }}
-              >
-                <MenuItem value="pending">Pending</MenuItem>
-                <MenuItem value="in-progress">In Progress</MenuItem>
-                <MenuItem value="completed">Completed</MenuItem>
-              </Select>
-            </FormControl>
-          </Box>
-        )}
       </CardContent>
     </Card>
   );
 
-  const renderKanbanView = () => (
-    <Grid container spacing={2}>
-      {/* Pending Column */}
-      <Grid size={{ xs: 12, md: 4 }}>
-        <Paper
-          elevation={0}
-          sx={{
-            p: 2,
-            bgcolor: 'action.hover',
-            borderRadius: 2,
-            minHeight: 400,
-          }}
-        >
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <PendingIcon sx={{ color: 'text.secondary' }} />
-              <Typography variant="subtitle2" fontWeight={600}>
-                Pending
-              </Typography>
-            </Box>
-            <Badge badgeContent={pendingTodos.length} color="default" />
-          </Box>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {pendingTodos.map((todo) => (
-              <React.Fragment key={todo.id}>
-                {renderTodoCard(todo, true)}
-              </React.Fragment>
-            ))}
-          </Box>
-        </Paper>
-      </Grid>
-
-      {/* In Progress Column */}
-      <Grid size={{ xs: 12, md: 4 }}>
-        <Paper
-          elevation={0}
-          sx={{
-            p: 2,
-            bgcolor: 'action.hover',
-            borderRadius: 2,
-            minHeight: 400,
-          }}
-        >
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <HourglassIcon sx={{ color: 'info.main' }} />
-              <Typography variant="subtitle2" fontWeight={600}>
-                In Progress
-              </Typography>
-            </Box>
-            <Badge badgeContent={inProgressTodos.length} color="info" />
-          </Box>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {inProgressTodos.map((todo) => (
-              <React.Fragment key={todo.id}>
-                {renderTodoCard(todo, true)}
-              </React.Fragment>
-            ))}
-          </Box>
-        </Paper>
-      </Grid>
-
-      {/* Completed Column */}
-      <Grid size={{ xs: 12, md: 4 }}>
-        <Paper
-          elevation={0}
-          sx={{
-            p: 2,
-            bgcolor: 'action.hover',
-            borderRadius: 2,
-            minHeight: 400,
-          }}
-        >
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <CheckIcon sx={{ color: 'success.main' }} />
-              <Typography variant="subtitle2" fontWeight={600}>
-                Completed
-              </Typography>
-            </Box>
-            <Badge badgeContent={completedTodos.length} color="success" />
-          </Box>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {completedTodos.map((todo) => (
-              <React.Fragment key={todo.id}>
-                {renderTodoCard(todo, true)}
-              </React.Fragment>
-            ))}
-          </Box>
-        </Paper>
-      </Grid>
-    </Grid>
-  );
-
-  const renderListView = () => (
-    <Card>
-      <CardContent>
-        <Typography variant="h6" fontWeight={600} gutterBottom>
-          All Tasks ({filteredTodos.length})
-        </Typography>
-        <Grid container spacing={2}>
-          {filteredTodos.map((todo) => (
-            <Grid size={{ xs: 12, md: 6, lg: 4 }} key={todo.id}>
-              {renderTodoCard(todo, true)}
-            </Grid>
-          ))}
-        </Grid>
-      </CardContent>
-    </Card>
-  );
-
-  return (
+  const renderRecordsTab = () => (
     <Box>
-      {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Box>
-          <Typography variant="h4" fontWeight={700} gutterBottom>
-            Task Management
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            Organize and track your team's tasks efficiently
-          </Typography>
-        </Box>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => handleOpenDialog()}
-          size="large"
-        >
-          Add Task
-        </Button>
-      </Box>
-
-      {/* Stats Cards */}
-      <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                <Box sx={{ p: 1, bgcolor: 'primary.light', borderRadius: 1, color: 'primary.dark' }}>
-                  <PendingIcon />
-                </Box>
-                <Box>
-                  <Typography variant="h4" fontWeight={700}>
-                    {pendingTodos.length}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    Pending Tasks
-                  </Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                <Box sx={{ p: 1, bgcolor: 'info.light', borderRadius: 1, color: 'info.dark' }}>
-                  <HourglassIcon />
-                </Box>
-                <Box>
-                  <Typography variant="h4" fontWeight={700}>
-                    {inProgressTodos.length}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    In Progress
-                  </Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                <Box sx={{ p: 1, bgcolor: 'success.light', borderRadius: 1, color: 'success.dark' }}>
-                  <CheckIcon />
-                </Box>
-                <Box>
-                  <Typography variant="h4" fontWeight={700}>
-                    {completedTodos.length}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    Completed
-                  </Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <Card>
-            <CardContent>
-              <Box sx={{ mb: 1 }}>
-                <Typography variant="h4" fontWeight={700} color="primary.main">
-                  {completionRate}%
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Completion Rate
-                </Typography>
-              </Box>
-              <LinearProgress
-                variant="determinate"
-                value={completionRate}
-                sx={{
-                  height: 8,
-                  borderRadius: 4,
-                  bgcolor: 'action.hover',
-                  '& .MuiLinearProgress-bar': {
-                    borderRadius: 4,
-                  },
-                }}
-              />
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-
-      {/* Filters and View Toggle */}
+      {/* Filters and Controls */}
       <Card sx={{ mb: 3 }}>
         <CardContent>
           <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
             <TextField
+              type="date"
+              value={selectedDate.toISOString().split('T')[0]}
+              onChange={(e) => setSelectedDate(new Date(e.target.value))}
               size="small"
-              placeholder="Search tasks..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              sx={{ minWidth: 250 }}
-              slotProps={{
-                input: {
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon fontSize="small" />
-                    </InputAdornment>
-                  ),
-                },
-              }}
+              slotProps={{ inputLabel: { shrink: true } }}
             />
-            <FormControl size="small" sx={{ minWidth: 140 }}>
-              <InputLabel>Status</InputLabel>
+            <FormControl size="small" sx={{ minWidth: 120 }}>
+              <InputLabel>View</InputLabel>
               <Select
-                value={filterStatus}
-                label="Status"
-                onChange={(e) => setFilterStatus(e.target.value as TodoStatus | 'all')}
+                value={viewMode}
+                label="View"
+                onChange={(e) => setViewMode(e.target.value as ViewMode)}
               >
-                <MenuItem value="all">All Status</MenuItem>
-                <MenuItem value="pending">Pending</MenuItem>
-                <MenuItem value="in-progress">In Progress</MenuItem>
-                <MenuItem value="completed">Completed</MenuItem>
-              </Select>
-            </FormControl>
-            <FormControl size="small" sx={{ minWidth: 140 }}>
-              <InputLabel>Priority</InputLabel>
-              <Select
-                value={filterPriority}
-                label="Priority"
-                onChange={(e) => setFilterPriority(e.target.value as TodoPriority | 'all')}
-              >
-                <MenuItem value="all">All Priority</MenuItem>
-                <MenuItem value="high">High</MenuItem>
-                <MenuItem value="medium">Medium</MenuItem>
-                <MenuItem value="low">Low</MenuItem>
+                <MenuItem value="day">Day</MenuItem>
+                <MenuItem value="week">Week</MenuItem>
+                <MenuItem value="month">Month</MenuItem>
               </Select>
             </FormControl>
             <Box sx={{ flexGrow: 1 }} />
-            <ToggleButtonGroup
-              value={viewMode}
-              exclusive
-              onChange={(_, newMode) => newMode && setViewMode(newMode)}
-              size="small"
+            <Typography variant="body2" color="text.secondary">
+              {filteredRecords.length} record{filteredRecords.length !== 1 ? 's' : ''}
+            </Typography>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => handleOpenDialog()}
             >
-              <ToggleButton value="kanban">
-                <Tooltip title="Kanban View">
-                  <KanbanIcon />
-                </Tooltip>
-              </ToggleButton>
-              <ToggleButton value="list">
-                <Tooltip title="List View">
-                  <ListIcon />
-                </Tooltip>
-              </ToggleButton>
-            </ToggleButtonGroup>
+              Add Record
+            </Button>
           </Box>
         </CardContent>
       </Card>
 
-      {/* My Tasks Section */}
-      {viewMode === 'list' && myTodos.length > 0 && (
+      {/* Records Grid */}
+      {filteredRecords.length === 0 ? (
+        <Card>
+          <CardContent sx={{ textAlign: 'center', py: 6 }}>
+            <CalendarIcon sx={{ fontSize: 60, color: 'text.secondary', mb: 2 }} />
+            <Typography variant="h6" color="text.secondary" gutterBottom>
+              No records found
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Try adjusting your date filter or add a new record
+            </Typography>
+          </CardContent>
+        </Card>
+      ) : (
+        <Grid container spacing={2}>
+          {filteredRecords.map((record) => (
+            <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={record.id}>
+              {renderRecordCard(record)}
+            </Grid>
+          ))}
+        </Grid>
+      )}
+    </Box>
+  );
+
+  const renderAnalysisTab = () => {
+    // Group by trainer
+    const byTrainer = filteredRecords.reduce((acc, record) => {
+      if (!acc[record.trainer]) {
+        acc[record.trainer] = [];
+      }
+      acc[record.trainer].push(record);
+      return acc;
+    }, {} as Record<string, MachineRecord[]>);
+
+    // Group by date
+    const byDate = filteredRecords.reduce((acc, record) => {
+      const dateKey = new Date(record.date).toLocaleDateString();
+      if (!acc[dateKey]) {
+        acc[dateKey] = [];
+      }
+      acc[dateKey].push(record);
+      return acc;
+    }, {} as Record<string, MachineRecord[]>);
+
+    // Calculate stats
+    const totalDuration = filteredRecords.reduce((sum, r) => sum + r.duration, 0);
+    const avgDuration = filteredRecords.length > 0 ? totalDuration / filteredRecords.length : 0;
+    const totalEpochs = filteredRecords.reduce((sum, r) => sum + r.epoch, 0);
+
+    return (
+      <Box>
+        {/* Summary Stats */}
+        <Grid container spacing={2} sx={{ mb: 3 }}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+            <Card>
+              <CardContent>
+                <Typography variant="h4" fontWeight={700} color="primary.main">
+                  {filteredRecords.length}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Total Records
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+            <Card>
+              <CardContent>
+                <Typography variant="h4" fontWeight={700} color="success.main">
+                  {totalDuration.toFixed(1)}h
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Total Duration
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+            <Card>
+              <CardContent>
+                <Typography variant="h4" fontWeight={700} color="info.main">
+                  {avgDuration.toFixed(1)}h
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Avg Duration
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+            <Card>
+              <CardContent>
+                <Typography variant="h4" fontWeight={700} color="warning.main">
+                  {totalEpochs}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Total Epochs
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+
+        {/* Analysis by Trainer */}
         <Card sx={{ mb: 3 }}>
           <CardContent>
             <Typography variant="h6" fontWeight={600} gutterBottom>
-              My Tasks ({myTodos.length})
+              Analysis by Trainer
             </Typography>
-            <Grid container spacing={2}>
-              {myTodos.map((todo) => (
-                <Grid size={{ xs: 12, md: 6, lg: 4 }} key={todo.id}>
-                  {renderTodoCard(todo)}
-                </Grid>
-              ))}
-            </Grid>
+            <TableContainer>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Trainer</TableCell>
+                    <TableCell align="right">Records</TableCell>
+                    <TableCell align="right">Total Duration</TableCell>
+                    <TableCell align="right">Avg Duration</TableCell>
+                    <TableCell align="right">Total Epochs</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {Object.entries(byTrainer).map(([trainer, trainerRecords]) => {
+                    const totalDur = trainerRecords.reduce((sum, r) => sum + r.duration, 0);
+                    const avgDur = totalDur / trainerRecords.length;
+                    const totalEp = trainerRecords.reduce((sum, r) => sum + r.epoch, 0);
+                    
+                    return (
+                      <TableRow key={trainer}>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Avatar sx={{ width: 28, height: 28, fontSize: '0.75rem', bgcolor: 'primary.main' }}>
+                              {trainer.split(' ').map(n => n[0]).join('')}
+                            </Avatar>
+                            {trainer}
+                          </Box>
+                        </TableCell>
+                        <TableCell align="right">{trainerRecords.length}</TableCell>
+                        <TableCell align="right">{totalDur.toFixed(1)}h</TableCell>
+                        <TableCell align="right">{avgDur.toFixed(1)}h</TableCell>
+                        <TableCell align="right">{totalEp}</TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </TableContainer>
           </CardContent>
         </Card>
-      )}
 
-      {/* Main View */}
-      {viewMode === 'kanban' ? renderKanbanView() : renderListView()}
+        {/* Analysis by Date */}
+        <Card>
+          <CardContent>
+            <Typography variant="h6" fontWeight={600} gutterBottom>
+              Analysis by Date
+            </Typography>
+            <TableContainer>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Date</TableCell>
+                    <TableCell align="right">Records</TableCell>
+                    <TableCell align="right">Total Duration</TableCell>
+                    <TableCell align="right">Avg Duration</TableCell>
+                    <TableCell align="right">Total Epochs</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {Object.entries(byDate)
+                    .sort(([a], [b]) => new Date(b).getTime() - new Date(a).getTime())
+                    .map(([date, dateRecords]) => {
+                      const totalDur = dateRecords.reduce((sum, r) => sum + r.duration, 0);
+                      const avgDur = totalDur / dateRecords.length;
+                      const totalEp = dateRecords.reduce((sum, r) => sum + r.epoch, 0);
+                      
+                      return (
+                        <TableRow key={date}>
+                          <TableCell>{date}</TableCell>
+                          <TableCell align="right">{dateRecords.length}</TableCell>
+                          <TableCell align="right">{totalDur.toFixed(1)}h</TableCell>
+                          <TableCell align="right">{avgDur.toFixed(1)}h</TableCell>
+                          <TableCell align="right">{totalEp}</TableCell>
+                        </TableRow>
+                      );
+                    })}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </CardContent>
+        </Card>
+      </Box>
+    );
+  };
+
+  return (
+    <Box>
+      {/* Header */}
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h4" fontWeight={700} gutterBottom>
+          Machine Renting Report
+        </Typography>
+        <Typography variant="body1" color="text.secondary">
+          Track and analyze machine usage and training records
+        </Typography>
+      </Box>
+
+      {/* Tabs */}
+      <Card sx={{ mb: 3 }}>
+        <Tabs
+          value={activeTab}
+          onChange={(_, newValue) => setActiveTab(newValue)}
+          sx={{ borderBottom: 1, borderColor: 'divider' }}
+        >
+          <Tab label="Records" value="records" />
+          <Tab label="Analysis" value="analysis" />
+        </Tabs>
+        <Box sx={{ p: 2 }}>
+          {activeTab === 'records' ? renderRecordsTab() : renderAnalysisTab()}
+        </Box>
+      </Card>
 
       {/* Add/Edit Dialog */}
       <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
-        <DialogTitle>{editingTodo ? 'Edit Task' : 'Add New Task'}</DialogTitle>
+        <DialogTitle>{editingRecord ? 'Edit Record' : 'Add New Record'}</DialogTitle>
         <DialogContent>
-          <TextField
-            fullWidth
-            label="Title"
-            value={formData.title}
-            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-            margin="normal"
-            autoFocus
-            required
-          />
-          <TextField
-            fullWidth
-            label="Description"
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            margin="normal"
-            multiline
-            rows={3}
-          />
-          <FormControl fullWidth margin="normal">
-            <InputLabel>Priority</InputLabel>
-            <Select
-              value={formData.priority}
-              label="Priority"
-              onChange={(e) => setFormData({ ...formData, priority: e.target.value as TodoPriority })}
-            >
-              <MenuItem value="low">Low</MenuItem>
-              <MenuItem value="medium">Medium</MenuItem>
-              <MenuItem value="high">High</MenuItem>
-            </Select>
-          </FormControl>
-          <TextField
-            fullWidth
-            label="Due Date"
-            type="date"
-            value={formData.dueDate}
-            onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
-            margin="normal"
-            slotProps={{ inputLabel: { shrink: true } }}
-          />
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid size={{ xs: 12 }}>
+              <TextField
+                fullWidth
+                label="Subset"
+                value={formData.subset}
+                onChange={(e) => setFormData({ ...formData, subset: e.target.value })}
+                required
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                fullWidth
+                label="Trainer"
+                value={formData.trainer}
+                onChange={(e) => setFormData({ ...formData, trainer: e.target.value })}
+                disabled={!isAdmin}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                fullWidth
+                label="Machine"
+                value={formData.machine}
+                onChange={(e) => setFormData({ ...formData, machine: e.target.value })}
+                required
+              />
+            </Grid>
+            <Grid size={{ xs: 12 }}>
+              <TextField
+                fullWidth
+                label="Dataset"
+                value={formData.dataset}
+                onChange={(e) => setFormData({ ...formData, dataset: e.target.value })}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                fullWidth
+                label="Date"
+                type="date"
+                value={formData.date}
+                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                slotProps={{ inputLabel: { shrink: true } }}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                fullWidth
+                label="Duration (hours)"
+                type="number"
+                value={formData.duration}
+                onChange={(e) => setFormData({ ...formData, duration: parseFloat(e.target.value) || 0 })}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                fullWidth
+                label="Epoch"
+                type="number"
+                value={formData.epoch}
+                onChange={(e) => setFormData({ ...formData, epoch: parseInt(e.target.value) || 0 })}
+              />
+            </Grid>
+            <Grid size={{ xs: 12 }}>
+              <TextField
+                fullWidth
+                label="Purpose"
+                value={formData.purpose}
+                onChange={(e) => setFormData({ ...formData, purpose: e.target.value })}
+                multiline
+                rows={2}
+              />
+            </Grid>
+            <Grid size={{ xs: 12 }}>
+              <TextField
+                fullWidth
+                label="Result"
+                value={formData.result}
+                onChange={(e) => setFormData({ ...formData, result: e.target.value })}
+                multiline
+                rows={2}
+              />
+            </Grid>
+          </Grid>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog}>Cancel</Button>
           <Button onClick={handleSubmit} variant="contained">
-            {editingTodo ? 'Update' : 'Add'}
+            {editingRecord ? 'Update' : 'Add'}
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Detail Dialog */}
+      <Dialog open={detailDialogOpen} onClose={() => setDetailDialogOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>Record Details</DialogTitle>
+        <DialogContent>
+          {selectedRecord && (
+            <Grid container spacing={2} sx={{ mt: 1 }}>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                  <DatasetIcon color="primary" />
+                  <Typography variant="subtitle2" fontWeight={600}>Subset</Typography>
+                </Box>
+                <Typography variant="body2">{selectedRecord.subset}</Typography>
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                  <CalendarIcon color="primary" />
+                  <Typography variant="subtitle2" fontWeight={600}>Date</Typography>
+                </Box>
+                <Typography variant="body2">{new Date(selectedRecord.date).toLocaleDateString()}</Typography>
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                  <TrainerIcon color="primary" />
+                  <Typography variant="subtitle2" fontWeight={600}>Trainer</Typography>
+                </Box>
+                <Typography variant="body2">{selectedRecord.trainer}</Typography>
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                  <MachineIcon color="primary" />
+                  <Typography variant="subtitle2" fontWeight={600}>Machine</Typography>
+                </Box>
+                <Typography variant="body2">{selectedRecord.machine}</Typography>
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                  <DatasetIcon color="primary" />
+                  <Typography variant="subtitle2" fontWeight={600}>Dataset</Typography>
+                </Box>
+                <Typography variant="body2">{selectedRecord.dataset || 'N/A'}</Typography>
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                  <DurationIcon color="primary" />
+                  <Typography variant="subtitle2" fontWeight={600}>Duration</Typography>
+                </Box>
+                <Typography variant="body2">{selectedRecord.duration} hours</Typography>
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                  <EpochIcon color="primary" />
+                  <Typography variant="subtitle2" fontWeight={600}>Epoch</Typography>
+                </Box>
+                <Typography variant="body2">{selectedRecord.epoch}</Typography>
+              </Grid>
+              <Grid size={{ xs: 12 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                  <PurposeIcon color="primary" />
+                  <Typography variant="subtitle2" fontWeight={600}>Purpose</Typography>
+                </Box>
+                <Typography variant="body2">{selectedRecord.purpose || 'N/A'}</Typography>
+              </Grid>
+              <Grid size={{ xs: 12 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                  <ResultIcon color="primary" />
+                  <Typography variant="subtitle2" fontWeight={600}>Result</Typography>
+                </Box>
+                <Typography variant="body2">{selectedRecord.result || 'N/A'}</Typography>
+              </Grid>
+            </Grid>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDetailDialogOpen(false)}>Close</Button>
         </DialogActions>
       </Dialog>
     </Box>
   );
 };
 
-export default Todos;
+export default MachineRentingReport;

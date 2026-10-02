@@ -3,7 +3,7 @@ import employeesReducer from './slices/employeesSlice';
 import performanceReducer from './slices/performanceSlice';
 import uiReducer from './slices/uiSlice';
 import authReducer from './slices/authSlice';
-import todosReducer from './slices/todosSlice';
+import machineRecordsReducer from './slices/todosSlice';
 
 export const store = configureStore({
   reducer: {
@@ -11,7 +11,7 @@ export const store = configureStore({
     performance: performanceReducer,
     ui: uiReducer,
     auth: authReducer,
-    todos: todosReducer,
+    machineRecords: machineRecordsReducer,
   },
 });
 

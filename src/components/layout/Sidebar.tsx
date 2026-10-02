@@ -36,7 +36,7 @@ const navItems: NavItem[] = [
   { title: 'Dashboard', path: '/', icon: <DashboardIcon /> },
   { title: 'Employees', path: '/employees', icon: <PeopleIcon /> },
   { title: 'Performance Reviews', path: '/reviews', icon: <AssessmentIcon /> },
-  { title: 'To-Do List', path: '/todos', icon: <ChecklistIcon /> },
+  { title: 'Machine Renting Report', path: '/todos', icon: <ChecklistIcon /> },
   { title: 'Analytics', path: '/analytics', icon: <BarChartIcon /> },
   { title: 'Goals & KPIs', path: '/goals', icon: <TrendingUpIcon /> },
   { title: 'Settings', path: '/settings', icon: <SettingsIcon /> },
