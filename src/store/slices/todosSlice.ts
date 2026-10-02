@@ -1,134 +1,136 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import type { UserRole } from './authSlice';
 
-export type TodoStatus = 'pending' | 'in-progress' | 'completed';
-export type TodoPriority = 'low' | 'medium' | 'high';
-
-export interface Todo {
+export interface MachineRecord {
   id: string;
-  title: string;
-  description: string;
-  status: TodoStatus;
-  priority: TodoPriority;
-  assignedTo: string; // user id
-  assignedToName: string;
-  assignedToRole: UserRole;
-  assignedToAvatar: string;
+  subset: string;
+  trainer: string; // user who trained
+  trainerId: string;
+  trainerRole: UserRole;
+  machine: string;
+  dataset: string;
+  date: string; // ISO date string
+  duration: number; // in hours
+  epoch: number;
+  purpose: string;
+  result: string;
   createdAt: string;
   updatedAt: string;
-  dueDate?: string;
 }
 
-interface TodosState {
-  list: Todo[];
+interface MachineRecordsState {
+  list: MachineRecord[];
 }
 
-const initialState: TodosState = {
+const initialState: MachineRecordsState = {
   list: [
     {
-      id: 't1',
-      title: 'Complete Q4 performance reviews',
-      description: 'Review and finalize all employee performance evaluations for Q4',
-      status: 'in-progress',
-      priority: 'high',
-      assignedTo: 'admin1',
-      assignedToName: 'Admin User',
-      assignedToRole: 'admin',
-      assignedToAvatar: 'AU',
-      createdAt: '2024-12-01T10:00:00Z',
-      updatedAt: '2024-12-15T14:30:00Z',
-      dueDate: '2024-12-31T23:59:59Z',
+      id: 'r1',
+      subset: 'Training Set A',
+      trainer: 'John Doe',
+      trainerId: 'user1',
+      trainerRole: 'user',
+      machine: 'GPU Server 01',
+      dataset: 'ImageNet-1K',
+      date: '2024-12-15',
+      duration: 8.5,
+      epoch: 100,
+      purpose: 'Model fine-tuning for production',
+      result: 'Accuracy: 94.2%, Loss: 0.15',
+      createdAt: '2024-12-15T10:00:00Z',
+      updatedAt: '2024-12-15T18:30:00Z',
     },
     {
-      id: 't2',
-      title: 'Update team goals for 2025',
-      description: 'Set new objectives and key results for the upcoming year',
-      status: 'pending',
-      priority: 'medium',
-      assignedTo: 'admin1',
-      assignedToName: 'Admin User',
-      assignedToRole: 'admin',
-      assignedToAvatar: 'AU',
-      createdAt: '2024-12-10T09:00:00Z',
-      updatedAt: '2024-12-10T09:00:00Z',
-      dueDate: '2025-01-15T23:59:59Z',
+      id: 'r2',
+      subset: 'Validation Set B',
+      trainer: 'Jane Smith',
+      trainerId: 'user2',
+      trainerRole: 'user',
+      machine: 'GPU Server 02',
+      dataset: 'CIFAR-100',
+      date: '2024-12-16',
+      duration: 4.0,
+      epoch: 50,
+      purpose: 'Hyperparameter tuning',
+      result: 'Best config found: lr=0.001',
+      createdAt: '2024-12-16T09:00:00Z',
+      updatedAt: '2024-12-16T13:00:00Z',
     },
     {
-      id: 't3',
-      title: 'Prepare presentation slides',
-      description: 'Create slides for the annual performance review meeting',
-      status: 'completed',
-      priority: 'high',
-      assignedTo: 'user1',
-      assignedToName: 'John Doe',
-      assignedToRole: 'user',
-      assignedToAvatar: 'JD',
-      createdAt: '2024-11-20T11:00:00Z',
-      updatedAt: '2024-12-05T16:45:00Z',
-      dueDate: '2024-12-10T23:59:59Z',
+      id: 'r3',
+      subset: 'Test Set C',
+      trainer: 'Admin User',
+      trainerId: 'admin1',
+      trainerRole: 'admin',
+      machine: 'GPU Server 01',
+      dataset: 'Custom Dataset v2',
+      date: '2024-12-17',
+      duration: 12.0,
+      epoch: 200,
+      purpose: 'Full model training',
+      result: 'Training completed successfully',
+      createdAt: '2024-12-17T08:00:00Z',
+      updatedAt: '2024-12-17T20:00:00Z',
     },
     {
-      id: 't4',
-      title: 'Attend training workshop',
-      description: 'Complete the leadership development training program',
-      status: 'in-progress',
-      priority: 'medium',
-      assignedTo: 'user1',
-      assignedToName: 'John Doe',
-      assignedToRole: 'user',
-      assignedToAvatar: 'JD',
-      createdAt: '2024-12-05T08:00:00Z',
-      updatedAt: '2024-12-12T10:00:00Z',
-      dueDate: '2024-12-20T23:59:59Z',
+      id: 'r4',
+      subset: 'Training Set D',
+      trainer: 'John Doe',
+      trainerId: 'user1',
+      trainerRole: 'user',
+      machine: 'GPU Server 03',
+      dataset: 'MNIST',
+      date: '2024-12-18',
+      duration: 2.5,
+      epoch: 20,
+      purpose: 'Quick experiment',
+      result: 'Baseline established',
+      createdAt: '2024-12-18T14:00:00Z',
+      updatedAt: '2024-12-18T16:30:00Z',
     },
     {
-      id: 't5',
-      title: 'Submit weekly report',
-      description: 'Compile and submit the weekly performance metrics report',
-      status: 'pending',
-      priority: 'low',
-      assignedTo: 'user2',
-      assignedToName: 'Jane Smith',
-      assignedToRole: 'user',
-      assignedToAvatar: 'JS',
-      createdAt: '2024-12-14T13:00:00Z',
-      updatedAt: '2024-12-14T13:00:00Z',
-      dueDate: '2024-12-16T23:59:59Z',
+      id: 'r5',
+      subset: 'Training Set E',
+      trainer: 'Jane Smith',
+      trainerId: 'user2',
+      trainerRole: 'user',
+      machine: 'GPU Server 02',
+      dataset: 'ImageNet-1K',
+      date: '2024-12-19',
+      duration: 6.0,
+      epoch: 75,
+      purpose: 'Transfer learning',
+      result: 'Feature extraction complete',
+      createdAt: '2024-12-19T11:00:00Z',
+      updatedAt: '2024-12-19T17:00:00Z',
     },
   ],
 };
 
-const todosSlice = createSlice({
-  name: 'todos',
+const machineRecordsSlice = createSlice({
+  name: 'machineRecords',
   initialState,
   reducers: {
-    addTodo: (state, action: PayloadAction<Omit<Todo, 'id' | 'createdAt' | 'updatedAt'>>) => {
+    addRecord: (state, action: PayloadAction<Omit<MachineRecord, 'id' | 'createdAt' | 'updatedAt'>>) => {
       const now = new Date().toISOString();
       state.list.push({
         ...action.payload,
-        id: `t${Date.now()}`,
+        id: `r${Date.now()}`,
         createdAt: now,
         updatedAt: now,
       });
     },
-    updateTodoStatus: (state, action: PayloadAction<{ id: string; status: TodoStatus }>) => {
-      const todo = state.list.find((t) => t.id === action.payload.id);
-      if (todo) {
-        todo.status = action.payload.status;
-        todo.updatedAt = new Date().toISOString();
+    updateRecord: (state, action: PayloadAction<{ id: string; updates: Partial<MachineRecord> }>) => {
+      const record = state.list.find((r) => r.id === action.payload.id);
+      if (record) {
+        Object.assign(record, action.payload.updates, { updatedAt: new Date().toISOString() });
       }
     },
-    updateTodo: (state, action: PayloadAction<{ id: string; updates: Partial<Todo> }>) => {
-      const todo = state.list.find((t) => t.id === action.payload.id);
-      if (todo) {
-        Object.assign(todo, action.payload.updates, { updatedAt: new Date().toISOString() });
-      }
-    },
-    deleteTodo: (state, action: PayloadAction<string>) => {
-      state.list = state.list.filter((t) => t.id !== action.payload);
+    deleteRecord: (state, action: PayloadAction<string>) => {
+      state.list = state.list.filter((r) => r.id !== action.payload);
     },
   },
 });
 
-export const { addTodo, updateTodoStatus, updateTodo, deleteTodo } = todosSlice.actions;
-export default todosSlice.reducer;
+export const { addRecord, updateRecord, deleteRecord } = machineRecordsSlice.actions;
+export default machineRecordsSlice.reducer;
